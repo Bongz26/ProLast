@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const pool = require('./database'); // ✅ use existing pool✅ Using PostgreSQL
+const pool = require('./database'); // ✅ PostgreSQL Pool from `database.js`
 
 const app = express();
 app.use(express.json());
@@ -18,11 +18,9 @@ app.use((req, res, next) => {
 });
 
 // ✅ API Routes
-
 app.get("/api/orders", async (req, res) => {
     try {
-        console.log("🛠 Attempting to query the latest orders...");
-        await pool.query("DISCARD ALL");
+        console.log("🛠 Fetching latest orders...");
         const result = await pool.query("SELECT * FROM Orders2 ORDER BY start_time DESC LIMIT 10");
 
         if (!result.rows.length) {
@@ -32,73 +30,6 @@ app.get("/api/orders", async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/check-duplicate", async (req, res) => {
-    try {
-        const { customer_name, client_contact, paint_type, category } = req.query;
-        const result = await pool.query(
-            "SELECT COUNT(*) AS count FROM Orders2 WHERE customer_name = $1 AND client_contact = $2 AND paint_type = $3 AND category = $4", 
-            [customer_name, client_contact, paint_type, category]
-        );
-        res.json({ exists: result.rows[0].count > 0 });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get("/api/order-status/:trackID", async (req, res) => {
-    try {
-        const result = await pool.query(
-            "SELECT current_status, estimated_completion FROM Orders2 WHERE transaction_id = $1", 
-            [req.params.trackID]
-        );
-
-        if (!result.rows.length) {
-            return res.status(404).json({ message: "Order not found" });
-        }
-
-        res.json({
-            status: result.rows[0].current_status,
-            estimatedCompletion: result.rows[0].estimated_completion
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/active-orders-count", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT COUNT(*) AS activeOrders FROM Orders2 WHERE current_status IN ('Waiting', 'Mixing')");
-        res.json({ activeOrders: result.rows[0].activeorders });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get("/api/test-db", async (req, res) => {
-    try {
-        const result = await pool.query("SELECT * FROM Orders2 LIMIT 1");
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.put("/api/orders/:id", async (req, res) => {
-    try {
-        const { current_status } = req.body;
-        const { id } = req.params;
-
-        await pool.query(
-            "UPDATE Orders2 SET current_status = $1 WHERE id = $2",
-            [current_status, id]
-        );
-
-        res.json({ message: "✅ Order status updated successfully!" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
     }
 });
 
@@ -136,9 +67,7 @@ app.post("/api/orders", async (req, res) => {
         const newOrder = await pool.query(query, values);
         await pool.query("COMMIT");
 
-        const insertedOrder = newOrder.rows[0];
-        return res.status(201).json(insertedOrder);
-
+        res.status(201).json(newOrder.rows[0]);
     } catch (err) {
         await pool.query("ROLLBACK");
         res.status(500).json({ error: err.message });
@@ -152,13 +81,11 @@ app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "client", "build", "index.html"));
 });
 
-// ✅ Basic root health check
+// ✅ Root health check
 app.get("/", (req, res) => {
-    res.send("🚀 Backend is alive! 🫠 ");
+    res.send("🚀 Backend is alive!!");
 });
 
 // ✅ Start the server
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () =>
-    console.log(`🚀 Server running on port ${PORT}`)
-);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
