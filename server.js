@@ -1,13 +1,13 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const pool = require('./database'); // ✅ PostgreSQL Pool from `database.js`
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+const pool = require("./database"); // ✅ PostgreSQL Pool from `database.js`
 
 const app = express();
-app.use(express.json());
+app.use(express.json()); // ✅ Enable JSON parsing
 
 app.use(cors({
-    origin: "*", 
+    origin: "*",
     methods: ["GET", "POST", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
@@ -58,8 +58,8 @@ app.post("/api/orders", async (req, res) => {
 
         const query = `
             INSERT INTO Orders2 (
-                transaction_id, customer_name, client_contact, 
-                paint_type, colour_code, category, priority, 
+                transaction_id, customer_name, client_contact,
+                paint_type, colour_code, category, priority,
                 start_time, estimated_completion, current_status
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
@@ -74,7 +74,7 @@ app.post("/api/orders", async (req, res) => {
     }
 });
 
-// ✅ Serve React static files in production
+// ✅ Serve React static files **AFTER API routes**
 app.use(express.static(path.join(__dirname, "client", "build")));
 
 app.get("*", (req, res) => {
